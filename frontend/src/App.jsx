@@ -14,7 +14,7 @@ function App() {
     setStatus("Creating server...");
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/create-server", {
+      const res = await fetch("http://98.88.38.166:8000/create-server", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
