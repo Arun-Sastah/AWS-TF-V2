@@ -1,15 +1,11 @@
-# --- Frontend (React + Vite) ---
-FROM node:20-alpine
+# Step 1: Use an Nginx image to serve the React app
+FROM nginx:alpine
 
-WORKDIR /app
+# Step 2: Copy the build files into the Nginx container
+COPY dist/ /usr/share/nginx/html
 
-COPY package*.json ./
-RUN npm install
+# Step 3: Expose port 80
+EXPOSE 80
 
-COPY . .
-
-RUN npm run build
-
-# Serve the frontend using vite preview (or nginx later)
-EXPOSE 5173
-CMD ["npm", "run", "preview", "--", "--host"]
+# Step 4: Run Nginx
+CMD ["nginx", "-g", "daemon off;"]

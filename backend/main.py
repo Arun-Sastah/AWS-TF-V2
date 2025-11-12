@@ -54,7 +54,7 @@ async def create_server(request: Request):
     device_id = body.get("device_id", random_suffix())
 
     # Device-specific Terraform directory
-    tf_dir = f"/app/terraform_templates/{device_id}"
+    tf_dir = os.path.expanduser(f"~/AWS-TF-V2/backend/terraform_templates/{device_id}") 
     os.makedirs(tf_dir, exist_ok=True)
     generate_terraform_files(device_id, path=tf_dir)
 
@@ -104,7 +104,7 @@ async def destroy_server(request: Request):
     body = await request.json()
     device_id = body["device_id"]
     user = body.get("user", "anonymous")
-    tf_dir = f"/app/terraform_templates/{device_id}"
+    tf_dir = os.path.expanduser(f"~/AWS-TF-V2/backend/terraform_templates/{device_id}") 
 
     proc_destroy = subprocess.run(
         ["terraform", "destroy", "-auto-approve"],
