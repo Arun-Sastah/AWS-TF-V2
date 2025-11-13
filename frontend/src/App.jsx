@@ -1,81 +1,118 @@
 import React, { useState } from "react";
 
-function App() {
-  const [status, setStatus] = useState("");    // To show status messages like success or error
-  const [user, setUser] = useState("");        // To store user input
-  const [device, setDevice] = useState("");    // To store device ID input
+// Backend URL (from Vite env or default localhost)
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-  // Handle button click for creating the server
-  const handleClick = async () => {
+function App() {
+  const [status, setStatus] = useState("");
+  const [user, setUser] = useState("");
+  const [device, setDevice] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [instanceInfo, setInstanceInfo] = useState(null);
+
+  // Call backend API
+  const callAPI = async (endpoint) => {
     if (!user || !device) {
-      setStatus("Please enter User and Device ID!"); // Check if both inputs are provided
+      setStatus("⚠️ Please enter both User and Device ID!");
       return;
     }
 
-    setStatus("Creating server..."); // Show status while server is being created
+    setLoading(true);
+    setStatus(`${endpoint === "deploy" ? "Creating" : "Destroying"} server...`);
+    setInstanceInfo(null);
 
     try {
-      // Send POST request to the backend API (Replace with your backend's IP)
-      const res = await fetch("http://98.88.38.166:8000/create-server", {
+      const res = await fetch(`${API_URL}/${endpoint}`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          user: user,
-          device_id: device, // Send device ID and user data to the backend
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user, device_id: device, instance_name: `${user}-${device}` }),
       });
 
-      const data = await res.json(); // Parse the JSON response
+      const data = await res.json();
 
       if (res.ok) {
-        // Success: Update status with resource info returned from the backend
-        setStatus(
-          `Server Created! Device: ${data.device_id}, Resource ID: ${data.resource_id}`
-        );
+        setStatus(`✅ ${data.message}`);
+
+        // Check if backend returned outputs (Terraform outputs)
+        if (data.outputs) {
+          setInstanceInfo({
+            id: data.outputs.ec2_instance_id?.value,
+            ip: data.outputs.ec2_public_ip?.value,
+            vpcId: data.outputs.vpc_id?.value,
+            subnetId: data.outputs.subnet_id?.value,
+            tableName: data.outputs.audit_table_name?.value,
+          });
+        }
       } else {
-        // Error: Show the error message from the backend
-        setStatus(`Error: ${data.detail}`);
+        // Show backend errors cleanly
+        const errorMsg =
+          typeof data.detail === "object"
+            ? JSON.stringify(data.detail, null, 2)
+            : data.detail;
+        setStatus(`❌ ${errorMsg}`);
       }
-    } catch (error) {
-      // Catch any errors during the request and show the error message
-      setStatus(`Error: ${error.message}`);
+    } catch (err) {
+      setStatus(`⚠️ ${err.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div style={{ textAlign: "center", marginTop: "50px" }}>
-      <h1>CosmicGen AWS Server Creator</h1>
+    <div style={{ textAlign: "center", marginTop: "50px", fontFamily: "Arial, sans-serif" }}>
+      <h1>🚀 CosmicGen AWS Server Manager</h1>
 
-      {/* Input for User */}
-      <input
-        placeholder="Enter User"
-        value={user}
-        onChange={(e) => setUser(e.target.value)} // Update user state on change
-        style={{ marginRight: "10px", padding: "5px" }}
-      />
+      <div style={{ marginBottom: "20px" }}>
+        <input
+          placeholder="Enter User"
+          value={user}
+          onChange={(e) => setUser(e.target.value)}
+          style={{ marginRight: "10px", padding: "5px" }}
+        />
+        <input
+          placeholder="Enter Device ID"
+          value={device}
+          onChange={(e) => setDevice(e.target.value)}
+          style={{ marginRight: "10px", padding: "5px" }}
+        />
+      </div>
 
-      {/* Input for Device ID */}
-      <input
-        placeholder="Enter Device ID"
-        value={device}
-        onChange={(e) => setDevice(e.target.value)} // Update device state on change
-        style={{ marginRight: "10px", padding: "5px" }}
-      />
+      <div>
+        <button
+          onClick={() => callAPI("create-server")}
+          disabled={loading}
+          style={{ marginRight: "10px", padding: "10px 20px" }}
+        >
+          Create Server
+        </button>
+        <button
+          onClick={() => callAPI("destroy-server")}
+          disabled={loading}
+          style={{
+            padding: "10px 20px",
+            backgroundColor: "#ff4d4f",
+            color: "white",
+            border: "none",
+          }}
+        >
+          Destroy Server
+        </button>
+      </div>
 
-      <br />
-      
-      {/* Button to trigger server creation */}
-      <button
-        onClick={handleClick} // Handle click event to call backend
-        style={{ marginTop: "20px", padding: "10px 20px" }}
-      >
-        Create Server
-      </button>
+      <div style={{ marginTop: "20px", fontWeight: "bold" }}>
+        {loading ? "⏳ Working..." : status}
+      </div>
 
-      {/* Show status of server creation */}
-      <p style={{ marginTop: "20px", fontWeight: "bold" }}>{status}</p>
+      {instanceInfo && (
+        <div style={{ marginTop: "20px", color: "green", textAlign: "left", display: "inline-block" }}>
+          <h3>Instance Details:</h3>
+          <p><strong>Instance ID:</strong> {instanceInfo.id}</p>
+          <p><strong>Public IP:</strong> {instanceInfo.ip}</p>
+          <p><strong>VPC ID:</strong> {instanceInfo.vpcId}</p>
+          <p><strong>Subnet ID:</strong> {instanceInfo.subnetId}</p>
+          <p><strong>Audit Table:</strong> {instanceInfo.tableName}</p>
+        </div>
+      )}
     </div>
   );
 }

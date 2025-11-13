@@ -16,6 +16,8 @@ dist/
 *.tfstate.backup
 *.tfvars
 crash.log
+terraform_templates/
+
 
 # ---- Docker ----
 *.tar
@@ -28,3 +30,6 @@ Thumbs.db
 # ---- Archives ----
 *.zip
 *.gz
+
+
+
